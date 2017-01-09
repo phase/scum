@@ -24,10 +24,10 @@ class Game(val players: MutableList<Player>) {
 
     fun handOutCards() {
         val deck = Deck()
-        var i = 0
+        var i = players.size - 1
         while (deck.cards.size > 0) {
             players[i].hand.add(deck.pullRandom())
-            if (++i > players.size - 1) i = 0
+            if (--i < 0) i = players.size - 1
         }
     }
 
@@ -351,19 +351,23 @@ class BotPlayer(i: Int) : Player("Bot $i") {
     }
 
     override fun take(amount: Int, theirHand: List<Card>): List<Card>? {
-        val cardsToTake = theirHand.sorted().subList(0, amount)
-        val cardsToGive = hand.sorted().asReversed().subList(0, amount).toMutableList()
+        val maxAmount = if (amount > hand.size) hand.size
+        else amount
+
+        val cardsToTake = theirHand.sorted().subList(0, maxAmount)
+        val cardsToGive = hand.sorted().asReversed().subList(0, maxAmount).toMutableList()
 //        println("$name $cardsToGive -> $cardsToTake (amount: $amount)")
         cardsToGive.addAll(cardsToTake)
         return cardsToGive
     }
 
     override fun play(top: List<Card>?): List<Card>? {
-        Thread.sleep(500) // Thinking takes a while
         if (top == null) return listOf(hand.last())
         val validCards = hand.filter { it.kind.int >= top.value() }.toMutableList().sorted().reversed()
 //        println("  Top Card: $top, $name's hand: $validCards from $hand.")
         if (validCards.isEmpty()) return null
+
+        Thread.sleep(500) // Thinking takes a while
 
         val amountNeeded = top.size
         var amount = 0
