@@ -251,7 +251,7 @@ class ConsolePlayer(name: String) : Player(name) {
 
         takeIndices ?: return null
         takeIndices.forEach {
-            if (it < 0 || it > theirHandSorted.size)
+            if (it < 0 || it >= theirHandSorted.size)
                 return null
         }
 
@@ -260,7 +260,7 @@ class ConsolePlayer(name: String) : Player(name) {
 
         giveIndices ?: return null
         giveIndices.forEach {
-            if (it < 0 || it > hand.size)
+            if (it < 0 || it >= hand.size)
                 return null
         }
 
@@ -333,7 +333,7 @@ class ConsolePlayer(name: String) : Player(name) {
 
             // Make sure the indices are within the bounds of the hand
             indices.forEach {
-                if (it < 0 || it > hand.size)
+                if (it < 0 || it >= hand.size)
                     return play(top)
             }
 
