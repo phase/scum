@@ -45,10 +45,7 @@ class Game(val players: MutableList<Player>) {
           4      5 4    6 1 4    7 1 4
                           5       6 5
          */
-        val topMiddle =
-                if (players.size % 2 == 0)
-                    players.size / 2 + 1
-                else Math.ceil(players.size / 2.0).toInt()
+        val topMiddle = Math.floor(players.size / 2.0 + 1.0).toInt()
         val mostToTake = players.size - topMiddle
         var amount = mostToTake
         var index = 0
@@ -58,10 +55,7 @@ class Game(val players: MutableList<Player>) {
             var take = highPlayer.take(amount, lowPlayer.hand)
 
             if (take != null) {
-                val takeSize = take.size.div(2)
-                // weird null shit in while loop
-                val takeMod2 = take.size % 2
-                while (!(takeSize <= amount && takeMod2 == 0)) {
+                while (take != null && !(take.size.div(2) <= amount && take.size % 2 == 0)) {
                     take = highPlayer.take(amount, lowPlayer.hand)
                 }
             }
@@ -214,14 +208,12 @@ class ConsolePlayer(name: String) : Player(name) {
         println("Your hand:")
         hand.sort()
         hand.forEachIndexed { i, card ->
-            // Put an X by the cards we can't use.
             println("  [${i + 1}] $card")
         }
 
         println("Their hand:")
         val theirHandSorted = theirHand.sorted()
         theirHandSorted.forEachIndexed { i, card ->
-            // Put an X by the cards we can't use.
             println("  [${i + 1}] $card")
         }
 
