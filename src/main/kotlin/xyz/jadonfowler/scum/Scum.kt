@@ -37,11 +37,60 @@ class Game(val players: MutableList<Player>) {
         top = null
     }
 
-    fun start() {
+    fun takeCards() {
+        /*
+        7 3 1   8 3 1   9 4 1   10 4 1   6 2 1
+        6 2 2   7 2 2   8 3 2    9 3 2   5 1 2
+        5 1 3   6 1 3   7 2 3    8 2 3    4 3
+          4      5 4    6 1 4    7 1 4
+                          5       6 5
+         */
+        val topMiddle =
+                if (players.size % 2 == 0)
+                    players.size / 2 + 1
+                else Math.ceil(players.size / 2.0).toInt()
+        val mostToTake = players.size - topMiddle
+        var amount = mostToTake
+        var index = 0
+        while (amount > 0) {
+            val highPlayer = players[index]
+            val lowPlayer = players[players.size - index - 1]
+            var take = highPlayer.take(amount, lowPlayer.hand)
+
+            if (take != null) {
+                val takeSize = take.size.div(2)
+                // weird null shit in while loop
+                val takeMod2 = take.size % 2
+                while (!(takeSize <= amount && takeMod2 == 0)) {
+                    take = highPlayer.take(amount, lowPlayer.hand)
+                }
+            }
+
+            if (take != null) {
+                val cardsToGive = take.subList(0, take.size / 2)
+                val cardsToTake = take.subList(take.size / 2, take.size)
+
+                if (highPlayer.hand.containsAll(cardsToGive)
+                        && lowPlayer.hand.containsAll(cardsToTake)) {
+                    highPlayer.hand.removeAll(cardsToGive)
+                    highPlayer.hand.addAll(cardsToTake)
+                    lowPlayer.hand.removeAll(cardsToTake)
+                    lowPlayer.hand.addAll(cardsToGive)
+                }
+            }
+            amount--
+            index++
+        }
+
+    }
+
+    fun start(takeCards: Boolean = false) {
         players.forEach {
             it.sendMessage("Passing out cards...")
         }
         handOutCards()
+
+        if (takeCards) takeCards()
 
         val totalPlayers = players.size
         var i = 0
@@ -139,7 +188,7 @@ class Game(val players: MutableList<Player>) {
         players.forEach {
             it.sendMessage("The game has finished!")
         }
-        start()
+        start(true)
     }
 
 }
@@ -150,6 +199,7 @@ abstract class Player(val name: String) {
     override fun toString(): String = name
 
     abstract fun play(top: List<Card>?): List<Card>?
+    abstract fun take(amount: Int, theirHand: List<Card>): List<Card>?
     abstract fun sendMessage(message: String)
 }
 
@@ -157,6 +207,68 @@ class ConsolePlayer(name: String) : Player(name) {
 
     override fun sendMessage(message: String) {
         println(message)
+    }
+
+    override fun take(amount: Int, theirHand: List<Card>): List<Card>? {
+
+        println("Your hand:")
+        hand.sort()
+        hand.forEachIndexed { i, card ->
+            // Put an X by the cards we can't use.
+            println("  [${i + 1}] $card")
+        }
+
+        println("Their hand:")
+        val theirHandSorted = theirHand.sorted()
+        theirHandSorted.forEachIndexed { i, card ->
+            // Put an X by the cards we can't use.
+            println("  [${i + 1}] $card")
+        }
+
+        fun getIndices(): List<Int>? {
+            val input = readLine()
+            if (input == null || input.isNullOrEmpty()) return null
+
+            if (input.matches(Regex("[0-9]+")))
+                return listOf(input.toInt() - 1)
+            else if (input.matches(Regex("[0-9]+, [0-9]+"))
+                    || input.matches(Regex("[0-9]+, [0-9]+, [0-9]+"))
+                    || input.matches(Regex("[0-9]+, [0-9]+, [0-9]+, [0-9]+"))) {
+                val indices = input.split(", ").map { it.toInt() - 1 }
+
+                // Check if there are multiple indices in the input
+                val searchIndices = mutableListOf<Int>()
+                indices.forEach {
+                    if (searchIndices.contains(it)) return getIndices()
+                    else searchIndices.add(it)
+                }
+                return indices
+            } else return null
+        }
+
+        print("Please choose $amount cards to take: ")
+        val takeIndices = getIndices()
+
+        takeIndices ?: return null
+        takeIndices.forEach {
+            if (it < 0 || it > theirHandSorted.size)
+                return null
+        }
+
+        print("Please choose $amount cards to give: ")
+        val giveIndices = getIndices()
+
+        giveIndices ?: return null
+        giveIndices.forEach {
+            if (it < 0 || it > hand.size)
+                return null
+        }
+
+        val cardsToGive = giveIndices.map { hand[it] }.toMutableList()
+        val cardsToTake = takeIndices.map { theirHandSorted[it] }
+        println("$cardsToGive -> $cardsToTake (amount: $amount)")
+        cardsToGive.addAll(cardsToTake)
+        return cardsToGive
     }
 
     override fun play(top: List<Card>?): List<Card>? {
@@ -201,6 +313,8 @@ class ConsolePlayer(name: String) : Player(name) {
         if (input.matches(Regex("[0-9]+"))) {
             val index = input.toInt() - 1
             if (index >= hand.size) return play(top)
+            if (index < 0 || index > hand.size)
+                return play(top)
             val card = hand[index]
             return listOf(card)
         }
@@ -234,6 +348,14 @@ class ConsolePlayer(name: String) : Player(name) {
 class BotPlayer(i: Int) : Player("Bot $i") {
     override fun sendMessage(message: String) {
 //        println(" Message to $name: $message")
+    }
+
+    override fun take(amount: Int, theirHand: List<Card>): List<Card>? {
+        val cardsToTake = theirHand.sorted().subList(0, amount)
+        val cardsToGive = hand.sorted().asReversed().subList(0, amount).toMutableList()
+//        println("$name $cardsToGive -> $cardsToTake (amount: $amount)")
+        cardsToGive.addAll(cardsToTake)
+        return cardsToGive
     }
 
     override fun play(top: List<Card>?): List<Card>? {
