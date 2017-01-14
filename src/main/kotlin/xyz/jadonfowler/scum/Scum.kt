@@ -282,7 +282,7 @@ class ConsolePlayer(name: String) : Player(name) {
             }
 
             // If we can only play our final card, play that card.
-            if (validCards.size == 1 && hand.size == 1) {
+            if (validCards.size == 1 && hand.size == 1 && top.size == 1) {
                 return listOf(validCards[0])
             }
         }
